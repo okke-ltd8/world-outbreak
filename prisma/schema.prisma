@@ -1,0 +1,145 @@
+// World Outbreak - Prisma Schema
+// PostgreSQL (Supabase) + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Banco de dados: Supabase (PostgreSQL).
+// - DATABASE_URL: connection string do PgBouncer (porta 6543, pooler) — usada em runtime
+//   (Netlify Functions são serverless, então o pooling é essencial para não esgotar conexões).
+// - DIRECT_URL: connection string direta (porta 5432) — usada apenas para migrations.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AdminRole {
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id              String   @id @default(cuid())
+  discordId       String   @unique
+  discordUsername String
+  discordAvatar   String?
+  discordEmail    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  minecraftAccount MinecraftAccount?
+  newsAuthored     News[]
+  adminLogs        AdminLog[]
+
+  @@index([discordId])
+}
+
+model MinecraftAccount {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  minecraftUuid   String    @unique
+  minecraftUsername String
+  verifiedAt      DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([minecraftUuid])
+  @@index([minecraftUsername])
+}
+
+model VerificationCode {
+  id                String    @id @default(cuid())
+  minecraftUuid     String
+  minecraftUsername String
+  code              String
+  expiresAt         DateTime
+  used              Boolean   @default(false)
+  attempts          Int       @default(0)
+  maxAttempts        Int       @default(5)
+  createdAt         DateTime  @default(now())
+
+  @@index([minecraftUuid])
+  @@index([code])
+}
+
+model SiteSettings {
+  id                Int      @id @default(1)
+  siteName          String   @default("World Outbreak")
+  serverName         String   @default("World Outbreak")
+  serverIp          String   @default("play.worldoutbreak.com.br")
+  serverPort        Int      @default(25565)
+  serverVersion     String   @default("1.20.1")
+  serverDescription String   @default("Um servidor de sobrevivência ambientado em um mundo devastado por um surto zumbi.") @db.Text
+  modpackName       String   @default("Cursed Walking")
+  modpackUrl        String?
+  maxPlayers        Int      @default(100)
+  serverOnline      Boolean  @default(false)
+  discordInvite     String   @default("https://discord.gg/")
+  discordGuildId    String   @default("")
+  instagramUrl      String?
+  tiktokUrl         String?
+  youtubeUrl        String?
+  twitterUrl        String?
+  logoUrl           String?
+  faviconUrl        String?
+  heroTitle         String   @default("WORLD OUTBREAK")
+  heroSubtitle       String   @default("Sobreviva. Adapte-se. Não confie em ninguém.")
+  updatedAt         DateTime @updatedAt
+}
+
+model News {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  content   String   @db.Text
+  imageUrl  String?
+  published Boolean  @default(false)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([published])
+}
+
+model Rule {
+  id        String   @id @default(cuid())
+  category  String
+  title     String
+  content   String   @db.Text
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([active])
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  discordId String    @unique
+  name      String
+  role      AdminRole @default(ADMIN)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  @@index([discordId])
+}
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action    String
+  details   String?  @db.Text
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+}

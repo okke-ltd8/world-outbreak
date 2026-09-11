@@ -1,0 +1,15 @@
+# Configuração de deploy do World Outbreak no Netlify.
+# O plugin @netlify/plugin-nextjs converte as rotas do Next.js (SSR, API Routes,
+# Route Handlers) em Netlify Functions automaticamente — não é necessário
+# nenhum ajuste manual de rotas.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  # Garante uma versão do Node compatível com Next.js 14 no ambiente de build da Netlify.
+  NODE_VERSION = "20"
